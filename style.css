@@ -58,7 +58,54 @@ dt{font-weight:600;color:var(--accent)}
 .links{display:flex;flex-direction:column;gap:.4rem;margin-top:1rem}
 .links a,.glass a{color:var(--accent)}
 a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-@media(max-width:600px){dl{grid-template-columns:1fr;gap:.1rem}dd{margin-bottom:.6rem}.project{max-width:100%}nav{gap:.8rem;font-size:.8rem;padding:1rem 3.6rem}.lang{top:.7rem;right:.7rem}}
+/* Phones and small tablets: give every card a transparent 3D stage at the top.
+   The artifact is rendered by WebGL behind the card and pinned inside this open
+   window, so it is fully visible instead of being hidden by the frosted glass. */
+@media(max-width:1099px){
+  :root{--stage:0px}
+  section{padding:5rem 1rem}
+  .glass{
+    position:relative;isolation:isolate;-webkit-backdrop-filter:none;backdrop-filter:none;
+    background:none;border:0;border-radius:24px 24px 24px 8px;
+    padding:calc(var(--stage) + 1.2rem) 1.25rem 1.3rem;
+  }
+  .glass::before{
+    content:"";position:absolute;inset:var(--stage) 0 0;z-index:-1;border-radius:inherit;
+    box-sizing:border-box;background:var(--glass);border:1px solid var(--line);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  }
+  .project:nth-of-type(even){border-radius:24px 24px 8px 24px}
+  .glass h2,.glass h3{text-shadow:0 2px 18px rgba(0,0,0,.4)}
+  .glass h2{font-size:1.75rem;margin-bottom:.6rem}
+  .glass h3{font-size:1.2rem}
+  .glass p+p{margin-top:.65rem}
+  .glass .meta{margin:.15rem 0 .65rem}
+  .glass ul{margin-top:.6rem}
+  .glass li+li{margin-top:.3rem}
+}
+@media(max-width:700px){
+  /* Tall profile/skills cards sit a little lower so their 3D stage clears the nav. */
+  #profil,#skills{padding-top:8rem;padding-bottom:2rem}
+}
+@media(max-width:600px){
+  dl{grid-template-columns:1fr;gap:.1rem}dd{margin-bottom:.6rem}.project{max-width:100%}
+  nav{gap:.8rem;font-size:.8rem;padding:1rem 3.6rem}.lang{top:.7rem;right:.7rem}
+  .glass{font-size:.94rem;line-height:1.52}
+  .glass h2{font-size:1.62rem}
+  .glass h3{font-size:1.14rem}
+  .glass p+p{margin-top:.55rem}
+  .glass ul{margin-top:.5rem;padding-left:.95rem}
+}
+@media(max-width:600px) and (max-height:720px){
+  .glass{font-size:.9rem;line-height:1.45;padding-bottom:1rem}
+  .glass h2{font-size:1.5rem;margin-bottom:.45rem}
+  .glass p+p{margin-top:.45rem}
+  .glass ul{margin-top:.4rem}
+  .glass li+li{margin-top:.2rem}
+  .glass .meta{margin:.1rem 0 .45rem}
+  section{padding-top:4rem;padding-bottom:3rem}
+  #profil,#skills{padding-top:7rem;padding-bottom:2rem}
+}
 @media(max-width:520px){nav{gap:.45rem;font-size:.72rem;padding:1rem 2.9rem}}
 @media(hover:none),(pointer:coarse){.hint{display:none}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}

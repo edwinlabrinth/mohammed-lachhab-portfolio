@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createWorld } from './world.js';
+import { createWorld } from './world.js?v=5';
 
 // Concept: scroll = altitude. Ground (day) -> sunset layer -> night sky with stars.
 const canvas = document.getElementById('sky');
@@ -159,18 +159,30 @@ function init() {
     contact: document.getElementById('contact'),
   };
   const layoutWorld = () => {
+    // Phones get a 3D stage at the top of each glass card. Keep the value in px
+    // so CSS and the pinning math agree.
+    const stage = innerWidth >= 1100 ? 0 : Math.round(Math.min(132, Math.max(96, innerHeight * 0.16)));
+    document.documentElement.style.setProperty('--stage', stage + 'px');
     const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
     const anchors = {};
     for (const [key, el] of Object.entries(anchorEls)) {
       if (!el) continue;
       const r = el.getBoundingClientRect();
-      const center = r.top + scrollY + r.height / 2;
-      anchors[key] = Math.min(1, Math.max(0, (center - innerHeight / 2) / max));
+      const top = r.top + scrollY;
+      const center = (top + r.height / 2 - innerHeight / 2) / max;
+      const card = el.classList.contains('glass') ? el : el.querySelector('.glass');
+      const cr = card ? card.getBoundingClientRect() : r;
+      anchors[key] = {
+        center: Math.min(1, Math.max(0, center)),
+        stage,
+        cardTop: cr.top + scrollY,
+      };
     }
     world.layout(anchors, DEPTH);
   };
   layoutWorld();
   addEventListener('load', layoutWorld);
+  document.fonts?.ready.then(layoutWorld);
   document.addEventListener('langchange', e => {
     world.setLang(e.detail.lang);
     requestAnimationFrame(layoutWorld);
@@ -250,7 +262,6 @@ function init() {
 
     // The world artifacts ride the same altitude as their DOM sections.
     scene.fog.color.copy(sky);
-    world.update(prog, clock.elapsedTime, reduce);
 
     // Hero craft: idle float + pointer tilt, then it spins away as you climb.
     const time = clock.elapsedTime, osc = reduce ? 0 : 1;
@@ -274,6 +285,8 @@ function init() {
     camera.rotation.x = -my * .06;
     camera.rotation.y = Math.cos(prog * Math.PI * 3.1) * .035 + mx * .04;
     camera.rotation.z = Math.sin(prog * Math.PI * 3.1) * .045;
+    camera.updateMatrixWorld();
+    world.update(prog, clock.elapsedTime, reduce, scrollY);
 
     altEl.textContent = Math.round(prog * 12000).toLocaleString(locale);
     barEl.style.width = (prog * 100) + '%';

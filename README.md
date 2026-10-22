@@ -14,6 +14,11 @@ islands anchored to the real sections: crystal (profil), shield (sécurité), bo
 crate (Sezart), gyroscope (compétences) and beacon (contact). The faceted paper plane floats in the
 hero, can be dragged to spin, and peels away as you climb. Altimeter HUD bottom-right.
 
+On phones every glass card opens a transparent 3D stage at its top; the matching artifact is pinned
+inside it, so the set pieces are visible on small screens instead of sitting behind the frosted card.
+The contact beacon turns its light down into the contact card. On wide screens the artifacts flank
+their cards and the beacon beams sideways across the contact card.
+
 ## Files
 - index.html — content (French by default), sections: hero, profil, projets, compétences, contact
 - i18n.js — FR/EN dictionary + toggle, remembers choice in localStorage

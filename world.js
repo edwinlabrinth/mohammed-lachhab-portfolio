@@ -31,7 +31,7 @@ export function createWorld(camera) {
       color: ACCENT, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false,
     }),
     beam: new THREE.MeshBasicMaterial({
-      color: 0xffc98a, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending,
+      color: 0xffc98a, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending,
       depthWrite: false, side: THREE.DoubleSide,
     }),
     wire: new THREE.MeshBasicMaterial({
@@ -87,6 +87,18 @@ export function createWorld(camera) {
     g.add(cloud);
 
     return g;
+  }
+
+  // Bounding box of the solid model only: no labels, halos, clouds or light shafts.
+  function visualBounds(root) {
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    root.traverse(o => {
+      if (!(o.isMesh || o.isLine) || o.userData.noBounds || !o.geometry) return;
+      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+      box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));
+    });
+    return box;
   }
 
   function makeLabel() {
@@ -250,7 +262,6 @@ export function createWorld(camera) {
   // --- Skills: gyroscope of rings and nodes ---
   function buildOrbit() {
     const g = new THREE.Group();
-    g.position.y = 3.2;
 
     const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.95, 1), mats.accent);
     g.add(core);
@@ -314,15 +325,42 @@ export function createWorld(camera) {
     ringB.rotation.x = Math.PI / 2.6;
     rig.add(ringB);
 
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 0.1, 24, 20, 1, true), mats.beam);
-    beam.position.y = 15.5;
-    rig.add(beam);
+    const beamPivot = new THREE.Group();
+    beamPivot.position.y = 4.35;
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 0.08, 22, 24, 1, true), mats.beam);
+    beam.position.y = 11;
+    beam.userData.noBounds = true;
+    beamPivot.add(beam);
+
+    const hotspot = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: cloudTex, color: 0xffd9a0, transparent: true, opacity: 0.45,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+    hotspot.scale.set(5, 5, 1);
+    hotspot.position.y = 22;
+    beamPivot.add(hotspot);
+    rig.add(beamPivot);
+
+    // Point the light at the contact card: left/down on desktop, straight down on phones.
+    g.userData.aim = (side) => {
+      const short = side === 0;
+      const k = short ? 0.68 : 1;
+      beam.scale.y = k;
+      beam.position.y = 11 * k;
+      hotspot.position.y = 22 * k + 0.3;
+      const tilt = 0.34;
+      beamPivot.rotation.z = short ? Math.PI : side > 0 ? Math.PI / 2 + tilt : -Math.PI / 2 - tilt;
+    };
+    g.userData.aim(1);
+    g.userData.beamPivot = beamPivot;
 
     g.add(rig);
     g.userData.spin = (t) => {
       ringA.rotation.z = t * 0.35;
       ringB.rotation.z = -t * 0.22;
       crown.scale.setScalar(1 + Math.sin(t * 1.6) * 0.06);
+      mats.beam.opacity = 0.16 + Math.sin(t * 1.3) * 0.04;
+      hotspot.material.opacity = 0.42 + Math.sin(t * 1.7) * 0.08;
     };
     return g;
   }
@@ -344,6 +382,9 @@ export function createWorld(camera) {
 
   const waypoints = defs.map((def, i) => {
     const g = def.build();
+    const bounds = visualBounds(g);
+    const middle = bounds.getCenter(new THREE.Vector3());
+    const size = bounds.getSize(new THREE.Vector3());
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({
       map: cloudTex, color: 0xffc98a, transparent: true, opacity: 0.16,
       depthWrite: false, blending: THREE.AdditiveBlending,
@@ -357,7 +398,9 @@ export function createWorld(camera) {
     group.add(g);
     return {
       ...def, group: g, label, index: i,
+      centerX: middle.x, centerY: middle.y, sizeX: size.x, sizeY: size.y,
       baseY: 0, baseX: 0, baseZ: def.z, visible: true,
+      stagePx: 0, cardTop: null,
     };
   });
 
@@ -401,46 +444,67 @@ export function createWorld(camera) {
     for (const gate of gates) gate.mesh.position.y = -gate.p * depth;
 
     for (const wp of waypoints) {
-      const p = anchors[wp.key] ?? 0.5;
-      wp.p = p;
-      wp.group.visible = wide;
+      const raw = anchors[wp.key];
+      const centerP = raw && typeof raw === 'object' ? raw.center : (raw ?? 0.5);
+      wp.p = centerP;
+      wp.stagePx = raw && typeof raw === 'object' ? (raw.stage || 0) : 0;
+      wp.cardTop = raw && typeof raw === 'object' ? (raw.cardTop ?? null) : null;
+      wp.group.visible = true;
 
       if (wide) {
         const dist = 30 - wp.z;
         const halfW = Math.tan(fov) * dist * camera.aspect;
         wp.baseX = wp.side * Math.min(halfW * 0.73, 30);
-        wp.baseY = -p * depth;
+        wp.baseY = -centerP * depth;
         wp.baseZ = wp.z;
         wp.group.scale.setScalar(wp.scale);
       } else {
+        // Phones: the artifact lives in the transparent stage at the top of its card.
         wp.baseX = 0;
-        wp.baseY = -p * depth;
-        wp.baseZ = -22;
-        wp.group.scale.setScalar(0.66);
+        wp.baseY = -centerP * depth;
+        wp.baseZ = 0;
+        wp.group.scale.setScalar(0.72);
       }
 
       wp.group.position.set(wp.baseX, wp.baseY, wp.baseZ);
       wp.label.sprite.visible = wide;
+      wp.group.userData.aim?.(wide ? wp.side : 0);
     }
   }
 
-  function update(prog, time, reduce) {
+  const _ray = new THREE.Vector3();
+
+  function update(prog, time, reduce, scrollY = 0) {
     for (const gate of gates) {
       gate.mesh.rotation.z = time * (reduce ? 0 : 0.09) * (gate.p > 0.5 ? -1 : 1) + gate.p * 4;
     }
     if (!reduce) moonGlow.material.opacity = 0.22 + Math.sin(time * 0.7) * 0.03;
 
     for (const wp of waypoints) {
-      if (!wide) continue;
-      const drift = reduce ? 0 : Math.sin(time * 0.5 + wp.index * 1.7) * 0.28;
-      wp.group.position.y = wp.baseY + drift;
-      wp.group.position.x = wp.baseX + (reduce ? 0 : Math.sin(time * 0.23 + wp.index) * 0.18);
-
       // Slight emphasis when the matching section is centered.
       const near = 1 - Math.min(1, Math.abs(prog - (wp.p ?? 0)) / 0.09);
-      const s = (wide ? wp.scale : 0.66) * (1 + near * 0.05);
+      const s = (wide ? wp.scale : 0.72) * (1 + near * 0.05);
       wp.group.scale.setScalar(s);
       wp.label.sprite.scale.set(10 / s, 2.5 / s, 1);
+
+      if (!wide && wp.stagePx > 0 && wp.cardTop != null) {
+        // Phones: pin the object inside the open stage at the top of its card.
+        const bob = reduce ? 0 : Math.sin(time * 0.7 + wp.index * 1.3) * 3;
+        const screenY = wp.cardTop - scrollY + wp.stagePx * 0.5 + bob;
+        _ray.set(0, 1 - (screenY / innerHeight) * 2, 0.5)
+          .unproject(camera).sub(camera.position).normalize();
+        const hit = (wp.baseZ - camera.position.z) / _ray.z;
+        wp.group.position.set(
+          camera.position.x + _ray.x * hit - wp.centerX * s,
+          camera.position.y + _ray.y * hit - wp.centerY * s,
+          wp.baseZ
+        );
+      } else {
+        const drift = reduce ? 0 : Math.sin(time * 0.5 + wp.index * 1.7) * 0.28;
+        wp.group.position.x = wp.baseX + (reduce ? 0 : Math.sin(time * 0.23 + wp.index) * 0.18);
+        wp.group.position.y = wp.baseY + drift;
+        wp.group.position.z = wp.baseZ;
+      }
 
       if (!reduce && wp.group.userData.spin) wp.group.userData.spin(time);
     }
