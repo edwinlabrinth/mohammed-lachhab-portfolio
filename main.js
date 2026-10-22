@@ -13,6 +13,92 @@ function init() {
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 400);
   camera.position.z = 30;
 
+  // --- Hero object: a faceted paper plane, the only "craft" in the scene ---
+  // Procedural environment map (sky gradient + sun) so the metal reflects the climb.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envScene = new THREE.Scene();
+  {
+    const envCanvas = document.createElement('canvas'); envCanvas.width = 8; envCanvas.height = 256;
+    const ectx = envCanvas.getContext('2d');
+    const eg = ectx.createLinearGradient(0, 0, 0, 256);
+    eg.addColorStop(0, '#3f86e0'); eg.addColorStop(.55, '#cfe6ff'); eg.addColorStop(1, '#ffd3a6');
+    ectx.fillStyle = eg; ectx.fillRect(0, 0, 8, 256);
+    const envTex = new THREE.CanvasTexture(envCanvas); envTex.colorSpace = THREE.SRGBColorSpace;
+    envScene.add(new THREE.Mesh(
+      new THREE.SphereGeometry(60, 32, 16),
+      new THREE.MeshBasicMaterial({ map: envTex, side: THREE.BackSide })
+    ));
+    const envSun = new THREE.Mesh(
+      new THREE.SphereGeometry(5, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfff6e8 })
+    );
+    envSun.position.set(-18, 16, -34);
+    envScene.add(envSun);
+  }
+  scene.environment = pmrem.fromScene(envScene, 0.02).texture;
+  envScene.traverse(o => {
+    if (o.isMesh) {
+      if (o.material.map) o.material.map.dispose();
+      o.geometry.dispose(); o.material.dispose();
+    }
+  });
+  pmrem.dispose();
+
+  scene.add(new THREE.HemisphereLight(0xcfe4ff, 0xffd0a8, 1.1));
+  const sunLight = new THREE.DirectionalLight(0xfff3e0, 2.2);
+  sunLight.position.set(-8, 12, 8);
+  scene.add(sunLight);
+  const rimLight = new THREE.DirectionalLight(0x9fc6ff, 1.4);
+  rimLight.position.set(6, -4, -8);
+  scene.add(rimLight);
+
+  // Paper-plane hull: two wings + a keel, flat-shaded for a faceted metal look.
+  const plane = new THREE.Group();
+  const hull = new THREE.BufferGeometry();
+  hull.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+    0, 0.15, 2.2,  -1.9, 0.35, -1.6,  0, -0.35, -1.2,  // left wing
+    0, 0.15, 2.2,   0, -0.35, -1.2,   1.9, 0.35, -1.6,  // right wing
+    0, 0.15, 2.2,   0, -1.05, -0.9,   0, -0.35, -1.2,   // keel
+  ]), 3));
+  hull.computeVertexNormals();
+  const hullMat = new THREE.MeshPhysicalMaterial({
+    color: 0x38445c, metalness: 0.15, roughness: 0.5, flatShading: true,
+    side: THREE.DoubleSide, envMapIntensity: 0.35, transparent: true, opacity: 1,
+  });
+  plane.add(new THREE.Mesh(hull, hullMat));
+  plane.add(new THREE.LineSegments(
+    new THREE.EdgesGeometry(hull),
+    new THREE.LineBasicMaterial({ color: 0xffe0b0, transparent: true, opacity: .6 })
+  ));
+
+  // Warm halo so the craft separates from the sky.
+  const glowCanvas = document.createElement('canvas'); glowCanvas.width = glowCanvas.height = 128;
+  const glowCtx = glowCanvas.getContext('2d');
+  const glowGradient = glowCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  glowGradient.addColorStop(0, 'rgba(255,246,228,.9)');
+  glowGradient.addColorStop(.35, 'rgba(255,228,190,.28)');
+  glowGradient.addColorStop(1, 'rgba(255,228,190,0)');
+  glowCtx.fillStyle = glowGradient; glowCtx.fillRect(0, 0, 128, 128);
+  const glowMat = new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(glowCanvas), transparent: true,
+    opacity: .22, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const glow = new THREE.Sprite(glowMat);
+  glow.scale.set(5.5, 5.5, 1); glow.position.z = -2.2;
+  plane.add(glow);
+  scene.add(plane);
+
+  const BASE_YAW = -0.7, BASE_PITCH = 0.55, BASE_ROLL = 0.12;
+  let hero = { x: 5.1, y: 1.25, z: 18, scale: 1 };
+  const placeHero = () => {
+    hero = innerWidth / innerHeight > 1
+      ? { x: 5.1, y: 1.25, z: 18, scale: 1 }
+      : { x: 1.55, y: 4.35, z: 19.5, scale: .72 };
+    plane.position.set(hero.x, hero.y, hero.z);
+    plane.scale.setScalar(hero.scale);
+  };
+  placeHero();
+
   // Palette by altitude: day -> sunset -> night
   const stops = [
     { sky: new THREE.Color('#8ec5ff'), cloud: new THREE.Color('#ffffff') },
@@ -58,7 +144,9 @@ function init() {
   const onScroll = () => { target = scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight); };
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
   addEventListener('pointermove', e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; });
-  const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
+  let locale = document.documentElement.lang === 'en' ? 'en-US' : 'fr-FR';
+  document.addEventListener('langchange', e => { locale = e.detail.lang === 'en' ? 'en-US' : 'fr-FR'; });
+  const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); placeHero(); };
   addEventListener('resize', resize); resize();
 
   const clock = new THREE.Clock();
@@ -76,11 +164,23 @@ function init() {
     }
     starMat.opacity = Math.max(0, (prog - .6) / .4);
 
+    // Hero craft: idle float + pointer tilt, then it spins away as you climb.
+    const time = clock.elapsedTime, osc = reduce ? 0 : 1;
+    plane.position.x = hero.x + Math.sin(time * .55) * .12 * osc;
+    plane.position.y = hero.y + Math.sin(time * .85) * .14 * osc;
+    plane.rotation.x = BASE_PITCH + my * .3 + Math.sin(time * .6) * .05 * osc;
+    plane.rotation.y = BASE_YAW + mx * .55 + Math.sin(time * .45) * .09 * osc;
+    plane.rotation.z = BASE_ROLL + prog * 1.6 + Math.sin(time * .7) * .04 * osc;
+    const heroFade = Math.max(0, 1 - prog * 4.5);
+    plane.visible = heroFade > .01;
+    hullMat.opacity = heroFade;
+    glowMat.opacity = .22 * heroFade;
+
     camera.position.y = -prog * DEPTH;
     camera.position.x += (mx * 6 - camera.position.x) * .05;
     camera.rotation.x = -my * .06;
 
-    altEl.textContent = Math.round(prog * 12000).toLocaleString('fr-FR');
+    altEl.textContent = Math.round(prog * 12000).toLocaleString(locale);
     barEl.style.width = (prog * 100) + '%';
     renderer.render(scene, camera);
     requestAnimationFrame(loop);
