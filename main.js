@@ -121,7 +121,7 @@ function init() {
   const placeHero = () => {
     hero = innerWidth / innerHeight > 1
       ? { x: 5.1, y: 1.25, z: 18, scale: 1 }
-      : { x: 1.55, y: 4.35, z: 19.5, scale: .72 };
+      : { x: 0.3, y: 4.35, z: 19.5, scale: .72 };
     plane.position.set(hero.x, hero.y, hero.z);
     plane.scale.setScalar(hero.scale);
   };
