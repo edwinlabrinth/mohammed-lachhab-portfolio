@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createWorld } from './world.js';
 
 // Concept: scroll = altitude. Ground (day) -> sunset layer -> night sky with stars.
 const canvas = document.getElementById('sky');
@@ -7,9 +8,36 @@ let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); } catch { /* CSS gradient fallback stays */ }
 if (renderer) init();
 
+// Cards lean toward the cursor: cheap CSS 3D on top of the WebGL world.
+if (matchMedia('(pointer:fine)').matches) {
+  let tiltFrame = 0, tilting = null;
+  addEventListener('pointermove', e => {
+    if (tiltFrame) return;
+    tiltFrame = requestAnimationFrame(() => {
+      tiltFrame = 0;
+      const el = e.target instanceof Element ? e.target.closest('.glass') : null;
+      if (tilting && tilting !== el) {
+        tilting.style.removeProperty('--rx');
+        tilting.style.removeProperty('--ry');
+        tilting.classList.remove('tilting');
+        tilting = null;
+      }
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const nx = (e.clientX - r.left) / r.width - .5;
+      const ny = (e.clientY - r.top) / r.height - .5;
+      el.style.setProperty('--rx', (ny * 3).toFixed(2) + 'deg');
+      el.style.setProperty('--ry', (-nx * 3).toFixed(2) + 'deg');
+      el.classList.add('tilting');
+      tilting = el;
+    });
+  });
+}
+
 function init() {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x8ec5ff, 0.008);
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 400);
   camera.position.z = 30;
 
@@ -116,12 +144,46 @@ function init() {
   const puffTex = new THREE.CanvasTexture(c);
 
   const DEPTH = 160; // total vertical world height scrolled through
+
+  // --- 3D waypoint world, anchored to the actual DOM sections ---
+  const world = createWorld(camera);
+  scene.add(world.group);
+  world.setLang(document.documentElement.lang === 'en' ? 'en' : 'fr');
+  const projectCards = document.querySelectorAll('.project');
+  const anchorEls = {
+    profile: document.getElementById('profil'),
+    security: projectCards[0],
+    booktinder: projectCards[1],
+    sezart: projectCards[2],
+    skills: document.getElementById('skills'),
+    contact: document.getElementById('contact'),
+  };
+  const layoutWorld = () => {
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    const anchors = {};
+    for (const [key, el] of Object.entries(anchorEls)) {
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const center = r.top + scrollY + r.height / 2;
+      anchors[key] = Math.min(1, Math.max(0, (center - innerHeight / 2) / max));
+    }
+    world.layout(anchors, DEPTH);
+  };
+  layoutWorld();
+  addEventListener('load', layoutWorld);
+  document.addEventListener('langchange', e => {
+    world.setLang(e.detail.lang);
+    requestAnimationFrame(layoutWorld);
+  });
+  if (new URLSearchParams(location.search).has('debug')) window.__world = { world, camera, scene, renderer, layoutWorld, plane };
+
   const puffs = [];
   const rnd = (a, b) => a + Math.random() * (b - a);
   // Clusters of puffs = clouds, spread over the full altitude range
-  for (let k = 0; k < 34; k++) {
-    const cxp = rnd(-60, 60), cyp = -rnd(0, DEPTH), czp = rnd(-70, 8);
-    for (let i = 0; i < 9; i++) {
+  const clusterCount = innerWidth < 700 ? 18 : 30;
+  for (let k = 0; k < clusterCount; k++) {
+    const cxp = rnd(-60, 60), cyp = -rnd(0, DEPTH), czp = rnd(-70, -6);
+    for (let i = 0; i < 8; i++) {
       const m = new THREE.SpriteMaterial({ map: puffTex, transparent: true, opacity: rnd(.35, .75), depthWrite: false });
       const s = new THREE.Sprite(m);
       const size = rnd(14, 30);
@@ -136,7 +198,7 @@ function init() {
   const sp = new Float32Array(900 * 3);
   for (let i = 0; i < 900; i++) { sp[i*3] = rnd(-150,150); sp[i*3+1] = -rnd(DEPTH*.55, DEPTH+40); sp[i*3+2] = rnd(-120,-30); }
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, transparent: true, opacity: 0, depthWrite: false });
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, transparent: true, opacity: 0, depthWrite: false, fog: false });
   scene.add(new THREE.Points(sg, starMat));
 
   let target = 0, prog = 0, mx = 0, my = 0;
@@ -144,9 +206,31 @@ function init() {
   const onScroll = () => { target = scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight); };
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
   addEventListener('pointermove', e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; });
+
+  // Drag the paper plane with the mouse while you are still on the hero.
+  let dragSpinX = 0, dragSpinY = 0, dragVX = 0, dragVY = 0, dragging = false, lastPX = 0, lastPY = 0;
+  if (matchMedia('(pointer:fine)').matches) {
+    addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      if (e.target instanceof Element && e.target.closest('a,button')) return;
+      if (scrollY > innerHeight * .25) return;
+      dragging = true; lastPX = e.clientX; lastPY = e.clientY;
+    });
+    addEventListener('pointermove', e => {
+      if (!dragging) return;
+      dragVX += (e.clientX - lastPX) * .0011;
+      dragVY += (e.clientY - lastPY) * .0011;
+      lastPX = e.clientX; lastPY = e.clientY;
+    });
+    const stopDrag = () => { dragging = false; };
+    addEventListener('pointerup', stopDrag);
+    addEventListener('pointercancel', stopDrag);
+    addEventListener('blur', stopDrag);
+  }
+
   let locale = document.documentElement.lang === 'en' ? 'en-US' : 'fr-FR';
   document.addEventListener('langchange', e => { locale = e.detail.lang === 'en' ? 'en-US' : 'fr-FR'; });
-  const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); placeHero(); };
+  const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); placeHero(); layoutWorld(); };
   addEventListener('resize', resize); resize();
 
   const clock = new THREE.Clock();
@@ -164,12 +248,19 @@ function init() {
     }
     starMat.opacity = Math.max(0, (prog - .6) / .4);
 
+    // The world artifacts ride the same altitude as their DOM sections.
+    scene.fog.color.copy(sky);
+    world.update(prog, clock.elapsedTime, reduce);
+
     // Hero craft: idle float + pointer tilt, then it spins away as you climb.
     const time = clock.elapsedTime, osc = reduce ? 0 : 1;
+    dragVX *= .94; dragVY *= .94;
+    dragSpinY = Math.max(-1.1, Math.min(1.1, dragSpinY + dragVX));
+    dragSpinX = Math.max(-.7, Math.min(.7, dragSpinX + dragVY));
     plane.position.x = hero.x + Math.sin(time * .55) * .12 * osc;
     plane.position.y = hero.y + Math.sin(time * .85) * .14 * osc;
-    plane.rotation.x = BASE_PITCH + my * .3 + Math.sin(time * .6) * .05 * osc;
-    plane.rotation.y = BASE_YAW + mx * .55 + Math.sin(time * .45) * .09 * osc;
+    plane.rotation.x = BASE_PITCH + my * .3 + Math.sin(time * .6) * .05 * osc + dragSpinX;
+    plane.rotation.y = BASE_YAW + mx * .55 + Math.sin(time * .45) * .09 * osc + dragSpinY;
     plane.rotation.z = BASE_ROLL + prog * 1.6 + Math.sin(time * .7) * .04 * osc;
     const heroFade = Math.max(0, 1 - prog * 4.5);
     plane.visible = heroFade > .01;
@@ -177,8 +268,12 @@ function init() {
     glowMat.opacity = .22 * heroFade;
 
     camera.position.y = -prog * DEPTH;
-    camera.position.x += (mx * 6 - camera.position.x) * .05;
+    const camX = Math.sin(prog * Math.PI * 3.1) * 2.2 + mx * 3;
+    camera.position.x += (camX - camera.position.x) * .05;
+    camera.position.z = 30 + Math.sin(prog * Math.PI * 2) * 2.5;
     camera.rotation.x = -my * .06;
+    camera.rotation.y = Math.cos(prog * Math.PI * 3.1) * .035 + mx * .04;
+    camera.rotation.z = Math.sin(prog * Math.PI * 3.1) * .045;
 
     altEl.textContent = Math.round(prog * 12000).toLocaleString(locale);
     barEl.style.width = (prog * 100) + '%';

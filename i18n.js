@@ -16,6 +16,7 @@ const translations = {
     'hero.lead': 'Je construis des applications web et mobile, et je les protège. Faites défiler : on monte dans les nuages.',
     'hero.cv': 'Télécharger mon CV',
     'hero.projects': 'Voir les projets',
+    'hero.hint': '↺ Glissez pour faire tourner l’avion',
 
     'profile.title': 'Profil',
     'profile.p1': 'Étudiant en génie informatique à l’ENSA Tanger et en mathématiques appliquées à la Faculté des Sciences de Tétouan. Je combine rigueur mathématique et bonnes pratiques de développement pour concevoir des applications performantes, structurées et sécurisées.',
@@ -68,6 +69,7 @@ const translations = {
     'hero.lead': 'I build web and mobile applications, and I keep them safe. Scroll down: we’re climbing into the clouds.',
     'hero.cv': 'Download my CV',
     'hero.projects': 'View projects',
+    'hero.hint': '↺ Drag to spin the plane',
 
     'profile.title': 'Profile',
     'profile.p1': 'Computer engineering student at ENSA Tangier and applied mathematics student at the Faculty of Sciences of Tétouan. I combine mathematical rigor with software engineering best practices to design performant, well-structured and secure applications.',

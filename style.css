@@ -36,11 +36,16 @@ h1{font-family:Fraunces,serif;font-weight:300;font-size:clamp(3.4rem,13vw,9rem);
 .btn:hover{transform:translateY(-2px)}
 .btn.ghost{background:transparent;color:var(--paper);border-color:var(--line);box-shadow:none}
 .btn.ghost:hover{background:rgba(255,255,255,.12)}
+.hint{margin-top:1rem;font-size:.8rem;opacity:.65;letter-spacing:.02em;text-shadow:0 1px 8px rgba(0,0,0,.4)}
 h2{font-family:Fraunces,serif;font-weight:600;font-size:2rem;margin-bottom:.8rem}
 h3{font-family:Fraunces,serif;font-weight:600;font-size:1.35rem}
 .float-title{text-shadow:0 2px 14px rgba(0,0,0,.45)}
 .glass{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid var(--line);border-radius:28px 28px 28px 8px;padding:1.8rem 2rem}
+@media(pointer:fine){
+  .glass{transform:perspective(1100px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .2s ease}
+  .glass.tilting{will-change:transform}
+}
 .project:nth-of-type(even){border-radius:28px 28px 8px 28px;margin-left:auto;margin-right:0}
 .project{max-width:94%}
 .glass p+p{margin-top:.8rem}
@@ -55,4 +60,5 @@ dt{font-weight:600;color:var(--accent)}
 a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media(max-width:600px){dl{grid-template-columns:1fr;gap:.1rem}dd{margin-bottom:.6rem}.project{max-width:100%}nav{gap:.8rem;font-size:.8rem;padding:1rem 3.6rem}.lang{top:.7rem;right:.7rem}}
 @media(max-width:520px){nav{gap:.45rem;font-size:.72rem;padding:1rem 2.9rem}}
+@media(hover:none),(pointer:coarse){.hint{display:none}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
