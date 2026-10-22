@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mohammed Lachhab — Portfolio</title>
+<meta name="description" content="Étudiant en génie informatique (ENSA Tanger) et mathématiques appliquées. Sécurité applicative, web, mobile.">
+<meta name="theme-color" content="#8ec5ff">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mohammed Lachhab — Portfolio">
+<meta property="og:description" content="Génie informatique · Mathématiques appliquées · Sécurité applicative. Applications web et mobile conçues et protégées.">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d1b2e'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-size='30' fill='%23ffd9a0' text-anchor='middle'%3EML%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<div class="altimeter" aria-hidden="true">
+  <span id="alt">0</span><small>m</small>
+  <div class="bar"><i id="altbar"></i></div>
+</div>
+
+<nav>
+  <a href="#top">Sol</a><a href="#profil">Profil</a><a href="#projets">Projets</a><a href="#skills">Compétences</a><a href="#contact">Contact</a>
+</nav>
+
+<main>
+  <section id="top" class="hero">
+    <p class="kicker">Tanger, 35.77°N — départ</p>
+    <h1>Mohammed<br>Lachhab</h1>
+    <p class="lead">Je construis des applications web et mobile, et je les protège. Faites défiler : on monte dans les nuages.</p>
+    <p class="cta">
+      <a class="btn" href="cv.pdf" download>Télécharger mon CV</a>
+      <a class="btn ghost" href="#projets">Voir les projets</a>
+    </p>
+  </section>
+
+  <section id="profil">
+    <div class="glass">
+      <h2>Profil</h2>
+      <p>Étudiant en génie informatique à l’ENSA Tanger et en mathématiques appliquées à la Faculté des Sciences de Tétouan. Je combine rigueur mathématique et bonnes pratiques de développement pour concevoir des applications performantes, structurées et sécurisées.</p>
+      <p>Je m’intéresse aux architectures web modernes, au développement logiciel, à l’intelligence artificielle et au machine learning.</p>
+      <ul class="plain">
+        <li><b>ENSA Tanger</b> — 2ème année, cycle ingénieur, génie informatique (2026–2027)</li>
+        <li><b>FS Tétouan</b> — 3ème année, licence mathématiques et applications (2026–2027)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="projets">
+    <h2 class="float-title">Projets</h2>
+    <article class="glass project">
+      <h3>Plateforme de Portfolios Numériques</h3>
+      <p class="meta">Projet d’intégration, ENSA Tanger · 2025–2026 · Rôle : sécurité applicative</p>
+      <ul>
+        <li>Défense multi-couches : reverse proxy Nginx non privilégié, TLS, limitation de débit (Leaky Bucket) contre brute-force et déni de service.</li>
+        <li>Double jeton JWT en cookies durcis (httpOnly, secure, sameSite), rotation des refresh tokens et détection de vol de session.</li>
+        <li>RBAC complété par de l’ABAC ; audits SAST (SonarQube Cloud) et DAST (OWASP ZAP) dans un pipeline GitLab CI/CD.</li>
+      </ul>
+    </article>
+    <article class="glass project">
+      <h3>BookTinder</h3>
+      <p class="meta">Application mobile · Janvier 2026</p>
+      <ul>
+        <li>Découverte de livres par balayage (swipe).</li>
+        <li>Interface orientée performance, animations personnalisées fluides.</li>
+        <li>Gestion d’état robuste sur tout le parcours.</li>
+      </ul>
+    </article>
+    <article class="glass project">
+      <h3>Sezart</h3>
+      <p class="meta">Cofondateur, technique et e-commerce · depuis avril 2026</p>
+      <ul>
+        <li>Marque de streetwear et boutique en ligne avec gestion des commandes et des stocks.</li>
+        <li>Du design à l’expédition, plus de 1 000 clients.</li>
+        <li>Présence digitale et acquisition sur les réseaux sociaux.</li>
+      </ul>
+    </article>
+  </section>
+
+  <section id="skills">
+    <div class="glass">
+      <h2>Compétences</h2>
+      <dl>
+        <dt>Langages</dt><dd>C, C++, Java, Python, HTML, CSS, Dart, PHP, JavaScript</dd>
+        <dt>Frameworks et outils</dt><dd>Flutter, Vue.js, Node.js, Express, Git, GitHub, Docker, Nginx, Firebase, Netlify</dd>
+        <dt>Sécurité et DevOps</dt><dd>JWT, RBAC, OWASP ZAP, SonarQube, GitLab CI/CD</dd>
+        <dt>Bases de données</dt><dd>MCD, MLD, SQL, PostgreSQL, Prisma, Firestore, Neon</dd>
+        <dt>Langues</dt><dd>Arabe (maternelle), anglais (avancé), français (avancé), espagnol (notions)</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="glass center">
+      <h2>On se parle ?</h2>
+      <p>Stage, projet, collaboration : écrivez-moi.</p>
+      <p class="links">
+        <a href="mailto:mohammedlechheb777@gmail.com">mohammedlechheb777@gmail.com</a>
+        <a href="https://github.com/edwinlabrinth" target="_blank" rel="noopener">github.com/edwinlabrinth</a>
+        <a href="tel:+212768510672">+212 768 510 672</a>
+        <a href="cv.pdf" download>Télécharger mon CV (PDF)</a>
+      </p>
+    </div>
+  </section>
+</main>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
