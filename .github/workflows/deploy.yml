@@ -1,0 +1,37 @@
+name: Deploy to Netlify
+
+on:
+  push:
+    branches:
+      - main
+      - space-journey
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-netlify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger production build
+        if: github.ref_name == 'main'
+        env:
+          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_HOOK_MAIN }}
+        run: |
+          test -n "$NETLIFY_BUILD_HOOK"
+          curl --fail --silent --show-error -X POST \
+            -H 'Content-Type: application/json' \
+            -d '{}' "$NETLIFY_BUILD_HOOK"
+          echo "Netlify production build triggered for $GITHUB_SHA"
+
+      - name: Trigger branch build
+        if: github.ref_name == 'space-journey'
+        env:
+          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_HOOK_SPACE }}
+        run: |
+          test -n "$NETLIFY_BUILD_HOOK"
+          curl --fail --silent --show-error -X POST \
+            -H 'Content-Type: application/json' \
+            -d '{}' "$NETLIFY_BUILD_HOOK"
+          echo "Netlify branch build triggered for $GITHUB_SHA"
